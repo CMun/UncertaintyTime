@@ -1,0 +1,33 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        "configurable"
+    ],
+    "companyName": "C. Munkelt",
+    "longName": "Uncertainty Time for the patient",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/view_1325_small.png",
+                "menuIcon": true,
+                "name": "Menu_Icon",
+                "type": "png"
+            },
+            {
+                "characterRegex": "[0-9:. ]",
+                "file": "fonts/Jura-Regular.ttf",
+                "name": "FONT_JURA_SUBSET_68",
+                "trackingAdjust": -2,
+                "type": "font"
+            }
+        ]
+    },
+    "shortName": "UncertaintyTime",
+    "uuid": "6bacb2ce-bc43-43ee-93d7-4bc8e457156f",
+    "versionCode": 1,
+    "versionLabel": "0.9",
+    "watchapp": {
+        "watchface": true
+    }
+}
