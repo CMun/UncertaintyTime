@@ -1,5 +1,7 @@
 {
-    "appKeys": {},
+    "appKeys": {
+        "KEY_INVERT": 0
+    },
     "capabilities": [
         "configurable"
     ],
@@ -26,7 +28,7 @@
     "shortName": "UncertaintyTime",
     "uuid": "6bacb2ce-bc43-43ee-93d7-4bc8e457156f",
     "versionCode": 1,
-    "versionLabel": "0.9",
+    "versionLabel": "1.0",
     "watchapp": {
         "watchface": true
     }

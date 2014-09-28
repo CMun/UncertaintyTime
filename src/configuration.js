@@ -7,7 +7,7 @@ Pebble.addEventListener("ready", function() {
 
 Pebble.addEventListener("showConfiguration", function() {
   console.log("showing configuration");
-  Pebble.openURL('http://assets.getpebble.com.s3-website-us-east-1.amazonaws.com/pebble-js/configurable.html');
+  Pebble.openURL('http://cmun.github.io/UncertaintyTime/configuration.html');
 });
 
 Pebble.addEventListener("webviewclosed", function(e) {
@@ -15,4 +15,15 @@ Pebble.addEventListener("webviewclosed", function(e) {
   // webview closed
   var options = JSON.parse(decodeURIComponent(e.response));
   console.log("Options = " + JSON.stringify(options));
+
+  //Send to Pebble, persist there
+  Pebble.sendAppMessage(
+    {"KEY_INVERT": options.invert},
+    function(e) {
+      console.log("Sending settings data...");
+    },
+    function(e) {
+      console.log("Settings feedback failed!");
+    }
+  );
 });

@@ -5,7 +5,20 @@ static TextLayer *s_time_layer;
 static Layer *minute_display_layer;
 static InverterLayer *inverter_layer;
 
+// we use our first version of the persistent storage
+#define STORAGE_VERSION 1
 
+// PebbleKit JS???
+#define KEY_INVERT 0
+
+// persistent memory layout
+#define STORE_BASE 123400000
+#define STORE_VERSION 1 + STORE_BASE
+#define STORE_INVERT  2 + STORE_BASE
+
+static bool InvertWatchface = false;
+static bool CurrState_Inverted = false;
+  
 const GPathInfo MINUTE_SEGMENT_STRAIGTH_PATH_POINTS = {
   4,
   (GPoint []) {
@@ -152,12 +165,93 @@ static void main_window_unload(Window *window) {
   // Destroy TextLayer
   text_layer_destroy(s_time_layer);
   layer_destroy(minute_display_layer);
-  inverter_layer_destroy(inverter_layer);
+  
+  if (CurrState_Inverted == true)
+  {
+    inverter_layer_destroy(inverter_layer);
+  }
   gpath_destroy (s_minute_segment_straight_path);
   gpath_destroy (s_minute_segment_diagonal_path);
 }
+
+// set the current inversion
+void SetInversion (const bool _newInversionState)
+{
+  if (CurrState_Inverted != _newInversionState)
+  {
+    if (CurrState_Inverted == true)
+    {
+      inverter_layer_destroy(inverter_layer);
+    }
+    else
+    {
+      Layer *window_layer = window_get_root_layer(s_main_window);
+      GRect bounds = layer_get_bounds(window_layer);
+      
+      inverter_layer = inverter_layer_create(GRect(0, 0, bounds.size.w, bounds.size.h));
+      layer_add_child(window_layer, inverter_layer_get_layer(inverter_layer));  
+    }
+    CurrState_Inverted = _newInversionState;
+  }
+}
+
+// receive JS framework messages (from the app configuration)
+static void in_recv_handler(DictionaryIterator *iterator, void *context)
+{
+  //Get Tuple
+  Tuple *t = dict_read_first(iterator);
+  if(t)
+  {
+    switch(t->key)
+    {
+    case KEY_INVERT:
+      //It's the KEY_INVERT key
+      if(strcmp(t->value->cstring, "on") == 0)
+      {
+        //Set and save as inverted
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "Conf: Inverted: on");
+ 
+        InvertWatchface =  true;
+        persist_write_bool(STORE_INVERT, true);
+      }
+      else if(strcmp(t->value->cstring, "off") == 0)
+      {
+        //Set and save as not inverted
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "Conf: Inverted: off");
+ 
+        InvertWatchface =  false;
+        persist_write_bool(STORE_INVERT, false);
+      }
+      break;
+    }
+  }
+
+  // update to current configuration
+  SetInversion (InvertWatchface);
+}
+
+static void init()
+{
+  if(!persist_exists(STORE_VERSION) ||
+      STORAGE_VERSION != persist_read_int(STORE_VERSION))
+  {
+    int ret;
+    
+    ret = persist_write_int(STORE_VERSION, STORAGE_VERSION);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "STORE_VERSION: %d", ret);
+
+    ret = persist_write_bool(STORE_INVERT, true);
+    InvertWatchface = true;
+  }
+  else
+  {
+    InvertWatchface = persist_read_bool(STORE_INVERT);
+    if (InvertWatchface == true)
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Conf: Inverted: true");
+    else
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Conf: Inverted: off");
+  }
   
-static void init() {
   // Create main Window element and assign to pointer
   s_main_window = window_create();
 
@@ -166,6 +260,10 @@ static void init() {
     .load = main_window_load,
     .unload = main_window_unload
   });
+
+  // register for app configuration messages
+  app_message_register_inbox_received((AppMessageInboxReceived) in_recv_handler);
+  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
 
   // Show the Window on the watch, with animated=true
   window_stack_push(s_main_window, true);
@@ -178,8 +276,7 @@ static void init() {
   layer_set_update_proc(minute_display_layer, minute_display_layer_update_callback);
   layer_add_child(window_layer, minute_display_layer);
   
-  inverter_layer = inverter_layer_create(GRect(0, 0, bounds.size.w, bounds.size.h));
-  layer_add_child(window_layer, inverter_layer_get_layer(inverter_layer));  
+  SetInversion (InvertWatchface);
 
   // Init the minute segment paths
   s_minute_segment_straight_path = gpath_create(&MINUTE_SEGMENT_STRAIGTH_PATH_POINTS);
@@ -194,6 +291,8 @@ static void init() {
 
 static void deinit() {
   tick_timer_service_unsubscribe();
+  // deregister JS messaging
+  app_message_deregister_callbacks ();
   // Destroy Window
   window_destroy(s_main_window);
 }
